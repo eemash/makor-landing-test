@@ -9,7 +9,7 @@ function App() {
 
   const fetchData = useCallback(() => {
     setLoading(true);
-    Promise.all([
+    return Promise.all([
       fetch("/api/ideas/today").then((r) => r.json()),
       fetch("/api/ideas/history").then((r) => r.json()),
     ])
@@ -29,10 +29,8 @@ function App() {
     setGenerating(true);
     fetch("/api/ideas/generate", { method: "POST" })
       .then((r) => r.json())
-      .then(() => {
-        fetchData();
-        setGenerating(false);
-      })
+      .then(() => fetchData())
+      .then(() => setGenerating(false))
       .catch(() => setGenerating(false));
   };
 

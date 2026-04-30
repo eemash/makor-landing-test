@@ -107,7 +107,7 @@ def _call_openai(trends_data: dict[str, Any], category: str) -> dict[str, Any]:
         max_tokens=1500,
     )
 
-    raw = response.choices[0].message.content.strip()
+    raw = (response.choices[0].message.content or "").strip()
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
 
