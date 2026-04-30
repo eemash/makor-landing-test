@@ -1,0 +1,7 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+pytrends==4.9.2
+openai==1.51.0
+apscheduler==3.10.4
+aiosqlite==0.20.0
