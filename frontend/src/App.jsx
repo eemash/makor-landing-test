@@ -39,8 +39,8 @@ function App() {
       <div className="header">
         <h1>CPG Idea Generator</h1>
         <p>
-          Fresh brand ideas powered by Google Trends + AI — one coffee, one
-          wildcard — delivered twice daily.
+          Fresh brand ideas powered by Google Trends + AI — 1 coffee + 3
+          wildcard — delivered daily to your inbox.
         </p>
         <button
           className="generate-btn"

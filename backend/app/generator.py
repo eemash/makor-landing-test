@@ -196,8 +196,9 @@ def generate_idea(category: str) -> dict[str, Any]:
     return idea
 
 
-def generate_daily_pair() -> list[dict[str, Any]]:
-    """Generate today's pair of ideas: 1 coffee + 1 general CPG."""
-    coffee_idea = generate_idea("coffee")
-    general_idea = generate_idea("general_cpg")
-    return [coffee_idea, general_idea]
+def generate_daily_batch() -> list[dict[str, Any]]:
+    """Generate today's batch of ideas: 1 coffee + 3 general CPG."""
+    ideas = [generate_idea("coffee")]
+    for _ in range(3):
+        ideas.append(generate_idea("general_cpg"))
+    return ideas
