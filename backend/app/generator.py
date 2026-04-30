@@ -8,10 +8,17 @@ import os
 from datetime import datetime
 from typing import Any
 
+import random
+
 from openai import OpenAI
 
 from app.database import save_idea
-from app.trends import get_coffee_trends, get_general_cpg_trends
+from app.trends import (
+    COFFEE_KEYWORDS,
+    GENERAL_CPG_KEYWORDS,
+    get_coffee_trends,
+    get_general_cpg_trends,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,15 +92,8 @@ def _build_prompt(trends_data: dict[str, Any], category: str) -> str:
     return prompt
 
 
-def generate_idea(category: str) -> dict[str, Any]:
-    """Generate a single CPG brand idea for the given category."""
-    logger.info("Generating %s idea...", category)
-
-    if category == "coffee":
-        trends_data = get_coffee_trends()
-    else:
-        trends_data = get_general_cpg_trends()
-
+def _call_openai(trends_data: dict[str, Any], category: str) -> dict[str, Any]:
+    """Call OpenAI to generate a brand concept. Returns parsed JSON or raises."""
     client = _get_client()
     user_prompt = _build_prompt(trends_data, category)
 
@@ -111,17 +111,71 @@ def generate_idea(category: str) -> dict[str, Any]:
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
 
+    return json.loads(raw)
+
+
+def _fallback_idea(trends_data: dict[str, Any], category: str) -> dict[str, str]:
+    """Generate a simple template-based idea when OpenAI is unavailable."""
+    keywords = trends_data.get("keywords_analyzed", [])
+    if not keywords:
+        keywords = random.sample(
+            COFFEE_KEYWORDS if category == "coffee" else GENERAL_CPG_KEYWORDS, 3
+        )
+
+    focus = random.choice(keywords)
+    scores = trends_data.get("keyword_scores", {})
+    score_info = scores.get(focus, {})
+    trend_dir = score_info.get("trend", "rising")
+
+    if category == "coffee":
+        names = ["BrewShift", "MorningPulse", "Roast & Rise", "CafeCraft", "BeanForward"]
+        products = ["cold brew concentrate", "mushroom-infused coffee blend", "protein coffee mix",
+                     "adaptogen espresso pods", "nitro coffee cans"]
+    else:
+        names = ["NourishCo", "VitalPeak", "PurePath", "GreenShift", "CoreFuel"]
+        products = ["functional snack bar", "probiotic sparkling drink", "plant-based protein crisp",
+                     "adaptogen gummy supplement", "electrolyte hydration mix"]
+
+    name = random.choice(names)
+    product = random.choice(products)
+
+    reasoning = (
+        f"Based on trending interest in '{focus}' (trend: {trend_dir}), there's a clear "
+        f"market opportunity in the {category.replace('_', ' ')} space. Consumers are increasingly "
+        f"searching for products related to {', '.join(keywords[:3])}, indicating unmet demand.\n\n"
+        f"The target demographic — health-conscious millennials and Gen Z — are actively seeking "
+        f"premium, functional alternatives to traditional products. A brand positioning around "
+        f"'{focus}' can capture this growing segment.\n\n"
+        f"Note: This idea was generated with template-based analysis because the AI service was "
+        f"temporarily unavailable. Re-generate for a full AI-powered analysis."
+    )
+
+    return {
+        "brand_name": name,
+        "tagline": f"Fuel your day with {focus}",
+        "product_type": product,
+        "target_audience": "Health-conscious millennials and Gen Z (ages 22-38)",
+        "reasoning": reasoning,
+    }
+
+
+def generate_idea(category: str) -> dict[str, Any]:
+    """Generate a single CPG brand idea for the given category."""
+    logger.info("Generating %s idea...", category)
+
+    if category == "coffee":
+        trends_data = get_coffee_trends()
+    else:
+        trends_data = get_general_cpg_trends()
+
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        logger.error("Failed to parse OpenAI response: %s", raw)
-        parsed = {
-            "brand_name": "Parse Error",
-            "tagline": "",
-            "product_type": "",
-            "target_audience": "",
-            "reasoning": raw,
-        }
+        parsed = _call_openai(trends_data, category)
+    except json.JSONDecodeError as e:
+        logger.error("Failed to parse OpenAI response: %s", e)
+        parsed = _fallback_idea(trends_data, category)
+    except Exception as e:
+        logger.error("OpenAI call failed: %s", e)
+        parsed = _fallback_idea(trends_data, category)
 
     idea = {
         "created_at": datetime.utcnow().isoformat(),
